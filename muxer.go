@@ -360,9 +360,7 @@ func (muxer *Muxer) RunCommand(c *whatsmeow.Client, evt *events.Message) {
 	case isCmd && !exists && muxer.Options.CommandSuggestion:
 		muxer.SuggestCommand(evt, prefix, name)
 	case isCmd && exists:
-		muxer.safeGo(func() {
-			muxer.execute(c, evt, sender, parsed, prefix, command)
-		})
+		muxer.execute(c, evt, sender, parsed, prefix, command)
 	}
 }
 
@@ -520,16 +518,16 @@ func (muxer *Muxer) markAsReadAndLogCommand(c *whatsmeow.Client, evt *events.Mes
 	}
 }
 
-func (muxer *Muxer) safeGo(fn func()) {
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				muxer.Log.Errorf("spawn panic: %v", r)
-			}
-		}()
-		fn()
-	}()
-}
+// func (muxer *Muxer) safeGo(fn func()) {
+// 	go func() {
+// 		defer func() {
+// 			if r := recover(); r != nil {
+// 				muxer.Log.Errorf("spawn panic: %v", r)
+// 			}
+// 		}()
+// 		fn()
+// 	}()
+// }
 
 func (muxer *Muxer) SendEmojiMessage(event *events.Message, emoji string) {
 	id := event.Info.ID
