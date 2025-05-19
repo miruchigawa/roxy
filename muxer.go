@@ -5,6 +5,7 @@ import (
 	gcontext "context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"git.hanaworks.site/miruchigawa/roxy/context"
@@ -340,11 +341,11 @@ func (muxer *Muxer) RunCommand(c *whatsmeow.Client, evt *events.Message) {
 		return
 	}
 
-	number := evt.Info.Sender.ToNonAD().String()
+	sender := evt.Info.Sender.ToNonAD().String()
 	parsed := util.ParseMessageText(evt)
 
-	if _, ok := muxer.QuestionState.Load(number); ok {
-		muxer.handleQuestionState(c, evt, number, parsed)
+	if _, ok := muxer.QuestionState.Load(sender); ok {
+		muxer.handleQuestionState(c, evt, sender, parsed)
 		return
 	}
 
@@ -352,67 +353,142 @@ func (muxer *Muxer) RunCommand(c *whatsmeow.Client, evt *events.Message) {
 		return
 	}
 
-	prefix, cmd, isCmd := muxer.CommandParser(parsed)
-	cmdLoad, isAvailable := muxer.Commands.Load(cmd)
+	prefix, name, isCmd := muxer.CommandParser(parsed)
+	command, exists := muxer.Commands.Load(name)
 
-	if isCmd && muxer.Options.CommandSuggestion && !isAvailable {
-		muxer.SuggestCommand(evt, prefix, cmd)
-		return
-	}
-
-	if isCmd && isAvailable {
-		ctx := context.NewCtx(muxer.Locals)
-		defer context.ReleaseCtx(ctx)
-
-		ctx.SetClient(c)
-		ctx.SetLogger(muxer.Log)
-		ctx.SetOptions(muxer.Options)
-		ctx.SetMessageEvent(evt)
-		ctx.SetClientJID(muxer.ClientJID())
-		ctx.SetParsedMsg(parsed)
-		ctx.SetPrefix(prefix)
-		ctx.SetClientMethods(muxer)
-		ctx.SetQuestionChan(muxer.QuestionChan)
-		ctx.SetPollingChan(muxer.PollingChan)
-
-		if len(cmdLoad.SubCommands) > 0 && len(ctx.Arguments) > 0 {
-			if child, ok := cmdLoad.SubCommands[ctx.Arguments[0]]; ok {
-				ctx.Arguments = ctx.Arguments[1:]
-				go muxer.markAsReadAndLogCommand(c, evt, number, fmt.Sprintf("%s+%s", cmdLoad.Name, child.Name))
-				muxer.executeCommand(evt, ctx, child, parsed)
-				return
-			}
-		}
-
-		go muxer.markAsReadAndLogCommand(c, evt, number, cmdLoad.Name)
-		muxer.executeCommand(evt, ctx, cmdLoad, parsed)
+	switch {
+	case isCmd && !exists && muxer.Options.CommandSuggestion:
+		muxer.SuggestCommand(evt, prefix, name)
+	case isCmd && exists:
+		muxer.safeGo(func() {
+			muxer.execute(c, evt, sender, parsed, prefix, command)
+		})
 	}
 }
 
-func (muxer *Muxer) executeCommand(evt *events.Message, ctx *context.Ctx, cmdLoad *Command, parsed string) {
-	if !muxer.passesCommandGuards(evt, cmdLoad) {
-		return
-	}
+func (muxer *Muxer) execute(client *whatsmeow.Client, evt *events.Message, sender, parsed, prefix string, command *Command) {
+	var message *waProto.Message
+	ctx := context.NewCtx(muxer.Locals)
+	defer context.ReleaseCtx(ctx)
 
-	if !muxer.runMiddlewares(ctx, cmdLoad) {
-		return
-	}
+	ctx.SetClient(client)
+	ctx.SetLogger(muxer.Log)
+	ctx.SetOptions(muxer.Options)
+	ctx.SetMessageEvent(evt)
+	ctx.SetClientJID(muxer.ClientJID())
+	ctx.SetParsedMsg(parsed)
+	ctx.SetPrefix(prefix)
+	ctx.SetClientMethods(muxer)
+	ctx.SetQuestionChan(muxer.QuestionChan)
+	ctx.SetPollingChan(muxer.PollingChan)
 
-	var msg *waProto.Message
-	if cmdLoad.Cache {
-		msg = muxer.getCachedCommandResponse(parsed)
-		if msg == nil {
-			msg = cmdLoad.RunFunc(ctx)
+	if child := muxer.resolveSubCommand(command, ctx); child != nil {
+		if !muxer.guardsPass(evt, child) || !muxer.runAllMiddlewares(ctx, child) {
+			return
 		}
+		key := fmt.Sprintf("%s-%s", command.Name, child.Name)
+
+		go muxer.markAsReadAndLogCommand(client, evt, sender, key)
+
+		if child.Cache {
+			message = muxer.getCachedCommandResponse(key)
+			if message == nil {
+				message = child.RunFunc(ctx)
+			}
+			muxer.setCacheCommandResponse(key, message)
+		} else {
+			message = child.RunFunc(ctx)
+		}
+
+		if message == nil {
+			return
+		}
+
+		muxer.SendMessage(evt.Info.Chat, message)
 	} else {
-		msg = cmdLoad.RunFunc(ctx)
+		if !muxer.guardsPass(evt, command) || !muxer.runAllMiddlewares(ctx, command) {
+			return
+		}
+
+		go muxer.markAsReadAndLogCommand(client, evt, sender, command.Name)
+
+		if command.Cache {
+			message = muxer.getCachedCommandResponse(command.Name)
+			if message == nil {
+				message = command.RunFunc(ctx)
+			}
+			muxer.setCacheCommandResponse(command.Name, message)
+		} else {
+			message = command.RunFunc(ctx)
+		}
+
+		if message == nil {
+			return
+		}
+
+		muxer.SendMessage(evt.Info.Chat, message)
+	}
+}
+
+func (muxer *Muxer) resolveSubCommand(command *Command, ctx *context.Ctx) *Command {
+	if len(command.SubCommands) <= 0 || len(ctx.Arguments()) <= 0 {
+		return nil
 	}
 
-	if msg != nil {
-		if _, err := muxer.SendMessage(evt.Info.Chat, msg); err == nil && cmdLoad.Cache {
-			muxer.setCacheCommandResponse(parsed, msg)
+	if child, ok := command.SubCommands[ctx.Arguments()[0]]; ok {
+		ctx.ArgumentsShift()
+		return child
+	}
+
+	if wildchar, ok := command.SubCommands["*"]; ok {
+		return wildchar
+	}
+
+	return nil
+}
+
+func (muxer *Muxer) guardsPass(evt *events.Message, command *Command) bool {
+	if command.GroupOnly && !evt.Info.IsGroup || command.PrivateOnly && evt.Info.IsGroup {
+		return false
+	}
+
+	if command.OnlyAdminGroup && evt.Info.IsGroup {
+		ok, _ := muxer.IsGroupAdmin(evt.Info.Chat, evt.Info.Sender)
+		if !ok {
+			return false
 		}
 	}
+
+	if command.OnlyIfBotAdmin && evt.Info.IsGroup {
+		ok, _ := muxer.IsClientGroupAdmin(evt.Info.Chat)
+		if !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (muxer *Muxer) runAllMiddlewares(ctx *context.Ctx, cmd *Command) bool {
+	var wg sync.WaitGroup
+	passed := true
+
+	muxer.Middlewares.Range(func(_ string, mw context.MiddlewareFunc) bool {
+		wg.Add(1)
+		if !mw(ctx) {
+			passed = false
+			wg.Done()
+			return false
+		}
+		wg.Done()
+		return true
+	})
+	wg.Wait()
+
+	if !passed || (cmd.Middleware != nil && !cmd.Middleware(ctx)) {
+		return false
+	}
+	return true
 }
 
 func (muxer *Muxer) isAllowedSource(evt *events.Message) bool {
@@ -431,26 +507,6 @@ func (muxer *Muxer) isFromValidSender(evt *events.Message) bool {
 	return !muxer.Options.OnlyFromSelf || evt.Info.IsFromMe
 }
 
-func (muxer *Muxer) passesCommandGuards(evt *events.Message, cmd *Command) bool {
-	if cmd.GroupOnly && !evt.Info.IsGroup {
-		return false
-	}
-	if cmd.PrivateOnly && evt.Info.IsGroup {
-		return false
-	}
-	if cmd.OnlyAdminGroup && evt.Info.IsGroup {
-		if ok, _ := muxer.IsGroupAdmin(evt.Info.Chat, evt.Info.Sender); !ok {
-			return false
-		}
-	}
-	if cmd.OnlyIfBotAdmin && evt.Info.IsGroup {
-		if ok, _ := muxer.IsClientGroupAdmin(evt.Info.Chat); !ok {
-			return false
-		}
-	}
-	return true
-}
-
 func (muxer *Muxer) markAsReadAndLogCommand(c *whatsmeow.Client, evt *events.Message, number string, cmd string) {
 	if muxer.Options.WithCommandLog {
 		muxer.Log.Infof("[CMD] [%s] command > %s", number, cmd)
@@ -460,26 +516,15 @@ func (muxer *Muxer) markAsReadAndLogCommand(c *whatsmeow.Client, evt *events.Mes
 	}
 }
 
-func (muxer *Muxer) runMiddlewares(ctx *context.Ctx, cmd *Command) bool {
-	if muxer.Middlewares.Size() > 0 {
-		allPassed := true
-		muxer.Middlewares.Range(func(_ string, middleware context.MiddlewareFunc) bool {
-			if !middleware(ctx) {
-				allPassed = false
-				return false
+func (muxer *Muxer) safeGo(fn func()) {
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				muxer.Log.Errorf("spawn panic: %v", r)
 			}
-			return true
-		})
-		if !allPassed {
-			return false
-		}
-	}
-
-	if cmd.Middleware != nil && !cmd.Middleware(ctx) {
-		return false
-	}
-
-	return true
+		}()
+		fn()
+	}()
 }
 
 func (muxer *Muxer) SendEmojiMessage(event *events.Message, emoji string) {
