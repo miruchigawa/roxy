@@ -54,7 +54,7 @@ type Ctx struct {
 	number    string
 	prefix    string
 	parsedMsg string
-	Arguments []string
+	arguments []string
 
 	message   *waE2E.Message
 	logger    waLog.Logger
@@ -117,8 +117,16 @@ func (context *Ctx) Prefix() string {
 	return context.prefix
 }
 
+func (context *Ctx) Arguments() []string {
+	return context.arguments
+}
+
+func (context *Ctx) ArgumentsShift() {
+	context.arguments = context.arguments[1:]
+}
+
 func (context *Ctx) SetParsedMsg(parsedMsg string) {
-	context.Arguments = strings.Split(parsedMsg, " ")[1:]
+	context.arguments = strings.Split(parsedMsg, " ")[1:]
 	context.parsedMsg = parsedMsg
 }
 
