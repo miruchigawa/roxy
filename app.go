@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
+	"git.hanaworks.site/miruchigawa/roxy/container"
+	"git.hanaworks.site/miruchigawa/roxy/context"
+	"git.hanaworks.site/miruchigawa/roxy/options"
+	"git.hanaworks.site/miruchigawa/roxy/util"
 	"github.com/goccy/go-json"
-	"github.com/itzngga/Roxy/container"
-	"github.com/itzngga/Roxy/context"
-	"github.com/itzngga/Roxy/options"
-	"github.com/itzngga/Roxy/util"
 	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow"
 	waBinary "go.mau.fi/whatsmeow/binary"
@@ -117,7 +117,7 @@ func (app *App) InitializeClient() error {
 			return errors.New("error: you must spcify host number when using pair code login options")
 		}
 
-		pairCode, err := app.client.PairPhone(app.options.HostNumber, true, whatsmeow.PairClientFirefox, "Firefox (Linux)")
+		pairCode, err := app.client.PairPhone(contextCtx.Background(), app.options.HostNumber, true, whatsmeow.PairClientFirefox, "Firefox (Linux)")
 		if err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ func (app *App) HandleEvents(event any) {
 	switch v := event.(type) {
 	case *events.LoggedOut:
 		app.log.Warnf("%s client logged out", app.clientJID)
-		app.client.Store.Delete()
+		app.client.Store.Delete(contextCtx.Background())
 
 		newApp, err := NewRoxyBase(app.options)
 		if err != nil {

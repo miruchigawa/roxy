@@ -1,7 +1,7 @@
 package context
 
 import (
-	"github.com/itzngga/Roxy/util"
+	"git.hanaworks.site/miruchigawa/roxy/util"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 )
 

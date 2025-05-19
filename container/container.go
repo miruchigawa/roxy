@@ -1,12 +1,13 @@
 package container
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"sync"
 
-	"github.com/itzngga/Roxy/options"
+	"git.hanaworks.site/miruchigawa/roxy/options"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"go.mau.fi/whatsmeow/store"
@@ -51,7 +52,7 @@ func (container *Container) ClientJID() waTypes.JID {
 
 func (container *Container) AcquireDevice(hostNumber string) (*store.Device, error) {
 	if hostNumber == "" {
-		device, err := container.storeContainer.GetFirstDevice()
+		device, err := container.storeContainer.GetFirstDevice(context.Background())
 		if device == nil {
 			container.NewDevice = true
 			device = container.storeContainer.NewDevice()
@@ -61,7 +62,7 @@ func (container *Container) AcquireDevice(hostNumber string) (*store.Device, err
 
 		return device, err
 	} else {
-		devices, err := container.storeContainer.GetAllDevices()
+		devices, err := container.storeContainer.GetAllDevices(context.Background())
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +92,7 @@ func NewContainer(options *options.Options) (*Container, error) {
 
 	if options.WithSqlDB != nil {
 		sqlDB := sqlstore.NewWithDB(options.WithSqlDB, options.StoreMode, waLog.Stdout("Database", "ERROR", true))
-		err := sqlDB.Upgrade()
+		err := sqlDB.Upgrade(context.Background())
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +104,7 @@ func NewContainer(options *options.Options) (*Container, error) {
 	} else if container.storeMode == "postgres" {
 		db := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(options.PostgresDsn.GenerateDSN())))
 		postgresql := sqlstore.NewWithDB(db, "postgres", waLog.Stdout("Database", "ERROR", true))
-		err := postgresql.Upgrade()
+		err := postgresql.Upgrade(context.Background())
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +126,7 @@ func NewContainer(options *options.Options) (*Container, error) {
 		}
 
 		sqlite := sqlstore.NewWithDB(db, "sqlite3", waLog.Stdout("Database", "ERROR", true))
-		err = sqlite.Upgrade()
+		err = sqlite.Upgrade(context.Background())
 		if err != nil {
 			return nil, err
 		}

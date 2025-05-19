@@ -1,13 +1,13 @@
 package main
 
 import (
-	roxy "github.com/itzngga/Roxy"
-	_ "github.com/itzngga/Roxy/examples/cmd"
-	"github.com/itzngga/Roxy/options"
-
 	"os"
 	"os/signal"
 	"syscall"
+
+	roxy "git.hanaworks.site/miruchigawa/roxy"
+	_ "git.hanaworks.site/miruchigawa/roxy/examples/cmd"
+	"git.hanaworks.site/miruchigawa/roxy/options"
 )
 
 func main() {

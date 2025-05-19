@@ -2,7 +2,8 @@ package roxy
 
 import (
 	"fmt"
-	"github.com/itzngga/Roxy/util"
+
+	"git.hanaworks.site/miruchigawa/roxy/util"
 	waTypes "go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 )
@@ -10,7 +11,7 @@ import (
 func (muxer *Muxer) FindGroupByJid(groupJid waTypes.JID) (group *waTypes.GroupInfo, err error) {
 	groups, ok := muxer.GroupCache.Load(groupJid.ToNonAD().String())
 	if !ok {
-		var client = muxer.AppMethods.Client()
+		client := muxer.AppMethods.Client()
 		groups, err = client.GetJoinedGroups()
 		if err != nil {
 			return nil, err
@@ -30,7 +31,7 @@ func (muxer *Muxer) FindGroupByJid(groupJid waTypes.JID) (group *waTypes.GroupIn
 }
 
 func (muxer *Muxer) GetAllGroups() (group []*waTypes.GroupInfo, err error) {
-	var client = muxer.AppMethods.Client()
+	client := muxer.AppMethods.Client()
 	groups, ok := muxer.GroupCache.Load(muxer.AppMethods.ClientJID().ToNonAD().String())
 	if !ok {
 		groups, err = client.GetJoinedGroups()
@@ -43,7 +44,7 @@ func (muxer *Muxer) GetAllGroups() (group []*waTypes.GroupInfo, err error) {
 }
 
 func (muxer *Muxer) CacheAllGroup() {
-	var client = muxer.AppMethods.Client()
+	client := muxer.AppMethods.Client()
 
 	groups, err := client.GetJoinedGroups()
 	if err != nil {
@@ -54,7 +55,7 @@ func (muxer *Muxer) CacheAllGroup() {
 
 func (muxer *Muxer) UnCacheOneGroup(info *events.GroupInfo, joined *events.JoinedGroup) {
 	var err error
-	var client = muxer.AppMethods.Client()
+	client := muxer.AppMethods.Client()
 	clientJID := muxer.AppMethods.ClientJID().ToNonAD()
 	if info != nil {
 		groups, ok := muxer.GroupCache.Load(clientJID.String())
@@ -93,6 +94,7 @@ func (muxer *Muxer) UnCacheOneGroup(info *events.GroupInfo, joined *events.Joine
 		}
 	}
 }
+
 func (muxer *Muxer) IsGroupAdmin(chat waTypes.JID, jid any) (bool, error) {
 	jids, err := util.ParseUserJid(jid)
 	if err != nil {

@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/itzngga/Roxy/options"
-	"github.com/itzngga/Roxy/types"
+	"git.hanaworks.site/miruchigawa/roxy/options"
+	"git.hanaworks.site/miruchigawa/roxy/types"
 	"github.com/puzpuzpuz/xsync"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"

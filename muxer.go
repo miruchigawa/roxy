@@ -2,15 +2,16 @@ package roxy
 
 import (
 	"bytes"
+	gcontext "context"
 	"fmt"
 	"strings"
 	"time"
 
+	"git.hanaworks.site/miruchigawa/roxy/context"
+	"git.hanaworks.site/miruchigawa/roxy/options"
+	"git.hanaworks.site/miruchigawa/roxy/types"
+	"git.hanaworks.site/miruchigawa/roxy/util"
 	"github.com/google/uuid"
-	"github.com/itzngga/Roxy/context"
-	"github.com/itzngga/Roxy/options"
-	"github.com/itzngga/Roxy/types"
-	"github.com/itzngga/Roxy/util"
 	"github.com/puzpuzpuz/xsync"
 	"github.com/sajari/fuzzy"
 	"go.mau.fi/whatsmeow"
@@ -263,7 +264,7 @@ func (muxer *Muxer) handlePollingState(c *whatsmeow.Client, evt *events.Message)
 
 	pollingState, ok := muxer.PollingState.Load(*evt.Message.PollUpdateMessage.PollCreationMessageKey.ID)
 	if ok {
-		pollMessage, err := c.DecryptPollVote(evt)
+		pollMessage, err := c.DecryptPollVote(gcontext.Background(), evt)
 		if err != nil {
 			return
 		}

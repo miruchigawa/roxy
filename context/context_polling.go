@@ -1,9 +1,10 @@
 package context
 
 import (
-	"github.com/itzngga/Roxy/util"
-	"go.mau.fi/whatsmeow"
 	"time"
+
+	"git.hanaworks.site/miruchigawa/roxy/util"
+	"go.mau.fi/whatsmeow"
 )
 
 type PollingOptions struct {
@@ -38,7 +39,7 @@ func NewPollingState(context *Ctx) *PollingState {
 }
 
 func (p *PollingState) SetPollInformation(name string, options []string) *PollingState {
-	var pollingOptions = make([]PollingOptions, 0)
+	pollingOptions := make([]PollingOptions, 0)
 	hashed := whatsmeow.HashPollOptions(options)
 	for i, bytes := range hashed {
 		pollingOptions = append(pollingOptions, PollingOptions{

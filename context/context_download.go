@@ -2,10 +2,11 @@ package context
 
 import (
 	"bytes"
+	gcontext "context"
 	"io"
 	"os"
 
-	"github.com/itzngga/Roxy/util"
+	"git.hanaworks.site/miruchigawa/roxy/util"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 )
 
@@ -23,7 +24,7 @@ func (context *Ctx) Download(quoted bool) ([]byte, error) {
 		msg = context.Message()
 	}
 
-	return context.Client().DownloadAny(msg)
+	return context.Client().DownloadAny(gcontext.Background(), msg)
 }
 
 // DownloadToFile download message to file with quoted message
@@ -40,7 +41,7 @@ func (context *Ctx) DownloadToFile(quoted bool, fileName string) (*os.File, erro
 		msg = context.Message()
 	}
 
-	data, err := context.Client().DownloadAny(msg)
+	data, err := context.Client().DownloadAny(gcontext.Background(), msg)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +76,7 @@ func (context *Ctx) DownloadMessage(message *waE2E.Message, quoted bool) ([]byte
 		msg = message
 	}
 
-	return context.Client().DownloadAny(msg)
+	return context.Client().DownloadAny(gcontext.Background(), msg)
 }
 
 // DownloadMessageToFile download with given message to file
@@ -92,7 +93,7 @@ func (context *Ctx) DownloadMessageToFile(message *waE2E.Message, quoted bool, f
 		msg = message
 	}
 
-	data, err := context.Client().DownloadAny(msg)
+	data, err := context.Client().DownloadAny(gcontext.Background(), msg)
 	if err != nil {
 		return nil, err
 	}
