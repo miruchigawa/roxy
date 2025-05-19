@@ -485,7 +485,11 @@ func (muxer *Muxer) runAllMiddlewares(ctx *context.Ctx, cmd *Command) bool {
 	})
 	wg.Wait()
 
-	if !passed || (cmd.Middleware != nil && !cmd.Middleware(ctx)) {
+	if !passed {
+		return false
+	}
+
+	if cmd.Middleware != nil && !cmd.Middleware(ctx) {
 		return false
 	}
 	return true
