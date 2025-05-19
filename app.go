@@ -78,7 +78,8 @@ func (app *App) InitializeClient() error {
 	app.client = whatsmeow.NewClient(app.device, waLog.Stdout("WhatsMeow", "ERROR", true))
 	app.client.EnableAutoReconnect = true
 	app.client.AutoTrustIdentity = true
-	// app.client.AutomaticMessageRerequestFromPhone = true
+	app.client.AutomaticMessageRerequestFromPhone = true
+	app.client.EmitAppStateEventsOnFullSync = true
 	app.client.AddEventHandler(app.HandleEvents)
 
 	// NOTE: Client shoud be connected into websocket before run any task
@@ -148,10 +149,11 @@ func (app *App) HandleEvents(event any) {
 		app.clientJID = *app.client.Store.ID
 		app.container.SetClientJID(app.clientJID)
 		app.client.SendPresence(waTypes.PresenceAvailable)
+
 		// app.muxer.CacheAllGroup()
 	case *events.Message:
 		go func() {
-			if !app.startTime.IsZero() && v.Info.Timestamp.After(app.startTime) {
+			if !app.startTime.IsZero() {
 				app.muxer.RunCommand(app.client, v)
 				return
 			}
@@ -178,46 +180,10 @@ func (app *App) HandleEvents(event any) {
 			message = "Unknown stream error"
 		}
 		app.log.Errorf("error: %s", message)
-	case *events.CallOffer, *events.CallOfferNotice:
-	// NOTE: Method deprecated
-	// var (
-	// 	callId string
-	// 	caller string
-	// )
-	//
-	// if val, ok := v.(*events.CallOffer); ok {
-	// 	callId = val.CallID
-	// 	caller = val.CallCreator.ToNonAD().String()
-	// } else if val, ok := v.(*events.CallOfferNotice); ok {
-	// 	callId = val.CallID
-	// 	caller = val.From.ToNonAD().String()
-	// }
-	//
-	// if app.options.AutoRejectCall {
-	// 	err := app.client.DangerousInternals().SendNode(waBinary.Node{
-	// 		Tag: "call",
-	// 		Attrs: waBinary.Attrs{
-	// 			"id":   whatsmeow.GenerateMessageID(),
-	// 			"from": app.clientJID.ToNonAD().String(),
-	// 			"to":   caller,
-	// 		},
-	// 		Content: []waBinary.Node{
-	// 			{
-	// 				Tag: "reject",
-	// 				Attrs: waBinary.Attrs{
-	// 					"call-id":      callId,
-	// 					"call-creator": caller,
-	// 					"count":        "0",
-	// 				},
-	// 				Content: nil,
-	// 			},
-	// 		},
-	// 	})
-	// 	if err != nil {
-	// 		app.log.Errorf("failed to reject call: %v\n", err)
-	// 		return
-	// 	}
-	// }
+	case *events.CallOfferNotice:
+		if app.options.AutoRejectCall {
+			app.client.RejectCall(v.From, v.CallID)
+		}
 	case *events.CallTerminate, *events.CallRelayLatency, *events.CallAccept, *events.UnknownCallEvent:
 		// ignore
 	case *events.AppState:
