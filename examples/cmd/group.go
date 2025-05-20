@@ -11,7 +11,7 @@ import (
 func init() {
 	speed := roxy.NewCommand("group")
 	speed.SetDescription("Testing latency")
-	speed.UseCache(false)
+	speed.UseCache(true)
 	speed.SetGroupOnly(true)
 	speed.SetRunFunc(groupFn)
 
