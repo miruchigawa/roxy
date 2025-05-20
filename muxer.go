@@ -364,11 +364,14 @@ func (muxer *Muxer) RunCommand(c *whatsmeow.Client, evt *events.Message) {
 	}
 }
 
-func (muxer *Muxer) execute(client *whatsmeow.Client, evt *events.Message, sender, parsed, prefix string, command *Command) {
-	var message *waProto.Message
+func (muxer *Muxer) execute(
+	client *whatsmeow.Client,
+	evt *events.Message,
+	sender, parsed, prefix string,
+	command *Command,
+) {
 	ctx := context.NewCtx(muxer.Locals)
 	defer context.ReleaseCtx(ctx)
-
 	ctx.SetClient(client)
 	ctx.SetLogger(muxer.Log)
 	ctx.SetOptions(muxer.Options)
@@ -380,50 +383,37 @@ func (muxer *Muxer) execute(client *whatsmeow.Client, evt *events.Message, sende
 	ctx.SetQuestionChan(muxer.QuestionChan)
 	ctx.SetPollingChan(muxer.PollingChan)
 
+	var key string
 	if child := muxer.resolveSubCommand(command, ctx); child != nil {
-		if !muxer.guardsPass(evt, child) || !muxer.runAllMiddlewares(ctx, child) {
+		key = fmt.Sprintf("%s-%s", command.Name, child.Name)
+		command = child
+		if !muxer.guardsPass(evt, command) || !muxer.runAllMiddlewares(ctx, command) {
 			return
 		}
-		key := fmt.Sprintf("%s-%s", command.Name, child.Name)
-
-		go muxer.markAsReadAndLogCommand(client, evt, sender, key)
-
-		if child.Cache {
-			message = muxer.getCachedCommandResponse(key)
-			if message == nil {
-				message = child.RunFunc(ctx)
-			}
-			muxer.setCacheCommandResponse(key, message)
-		} else {
-			message = child.RunFunc(ctx)
-		}
-
-		if message == nil {
-			return
-		}
-
-		muxer.SendMessage(evt.Info.Chat, message)
 	} else {
 		if !muxer.guardsPass(evt, command) || !muxer.runAllMiddlewares(ctx, command) {
 			return
 		}
+		key = command.Name
+	}
 
-		go muxer.markAsReadAndLogCommand(client, evt, sender, command.Name)
+	go muxer.markAsReadAndLogCommand(client, evt, sender, key)
 
-		if command.Cache {
-			message = muxer.getCachedCommandResponse(command.Name)
-			if message == nil {
-				message = command.RunFunc(ctx)
-			}
-			muxer.setCacheCommandResponse(command.Name, message)
+	var message *waProto.Message
+	if command.Cache {
+		if cached := muxer.getCachedCommandResponse(key); cached != nil {
+			message = cached
 		} else {
 			message = command.RunFunc(ctx)
+			if message != nil {
+				go muxer.setCacheCommandResponse(key, message)
+			}
 		}
+	} else {
+		message = command.RunFunc(ctx)
+	}
 
-		if message == nil {
-			return
-		}
-
+	if message != nil {
 		muxer.SendMessage(evt.Info.Chat, message)
 	}
 }
