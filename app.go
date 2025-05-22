@@ -144,7 +144,10 @@ func (app *App) HandleEvents(event any) {
 		app.clientJID = v.ID
 	case *events.Connected:
 		app.startTime = time.Now()
-		app.log.Infof("Client connected as %s", util.Or(app.client.Store.PushName, "Unknown"))
+
+		if app.client.Store.PushName != "" {
+			app.log.Infof("Client connected as %s", util.Or(app.client.Store.PushName, "Unknown"))
+		}
 
 		app.clientJID = *app.client.Store.ID
 		app.container.SetClientJID(app.clientJID)
@@ -191,7 +194,9 @@ func (app *App) HandleEvents(event any) {
 	case *events.IdentityChange:
 		// println("Evoked IdentityChange")
 	case *events.PushNameSetting:
-		app.log.Infof("Name changed to %s", app.client.Store.PushName)
+		app.log.Infof("Client connected as %s", util.Or(app.client.Store.PushName, "Unknown"))
+		app.client.SendPresence(waTypes.PresenceAvailable)
+
 	case *events.JoinedGroup:
 		app.muxer.UnCacheOneGroup(nil, v)
 	case *events.GroupInfo:
