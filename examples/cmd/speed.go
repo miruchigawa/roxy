@@ -16,6 +16,7 @@ func init() {
 
 	childNya := roxy.NewCommand("nya")
 	childNya.SetDescription("Testing subcommand")
+	childNya.AddArgument("test", "Testo", roxy.ArgumentBool, false, true)
 	childNya.SetRunFunc(nyaFn)
 
 	speed.AddSubCommands(childNya)
@@ -31,5 +32,9 @@ func speedFn(ctx *context.Ctx) context.Result {
 }
 
 func nyaFn(ctx *context.Ctx) context.Result {
-	return ctx.GenerateReplyMessage("Nya!")
+	if ctx.GetArgumentBool("test") {
+		return ctx.GenerateReplyMessage("Nya!")
+	} else {
+		return ctx.GenerateReplyMessage("Nya? (｡•́︿•̀｡)")
+	}
 }
