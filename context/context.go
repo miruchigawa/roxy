@@ -42,6 +42,7 @@ func ReleaseCtx(c *Ctx) {
 func NewCtx(locals *xsync.MapOf[string, string]) *Ctx {
 	ctx := AcquireCtx()
 	ctx.locals = locals
+	ctx.argumentsMap = make(map[string]any)
 	return ctx
 }
 
@@ -50,11 +51,12 @@ type Ctx struct {
 	event  *events.Message
 	info   waTypes.MessageInfo
 
-	fromMe    bool
-	number    string
-	prefix    string
-	parsedMsg string
-	arguments []string
+	fromMe       bool
+	number       string
+	prefix       string
+	parsedMsg    string
+	arguments    []string
+	argumentsMap map[string]any
 
 	message   *waE2E.Message
 	logger    waLog.Logger
@@ -123,6 +125,42 @@ func (context *Ctx) Arguments() []string {
 
 func (context *Ctx) ArgumentsShift() {
 	context.arguments = context.arguments[1:]
+}
+
+func (context *Ctx) StoreArgument(name string, value any) {
+	context.argumentsMap[name] = value
+}
+
+func (context *Ctx) GetArgumentString(key string) string {
+	if v, ok := context.argumentsMap[key].(string); ok {
+		return v
+	} else {
+		return ""
+	}
+}
+
+func (context *Ctx) GetArgumentInt(key string) int64 {
+	if v, ok := context.argumentsMap[key].(int64); ok {
+		return v
+	} else {
+		return 0
+	}
+}
+
+func (context *Ctx) GetArgumentFloat(key string) float64 {
+	if v, ok := context.argumentsMap[key].(float64); ok {
+		return v
+	} else {
+		return 0.0
+	}
+}
+
+func (context *Ctx) GetArgumentBool(key string) bool {
+	if v, ok := context.argumentsMap[key].(bool); ok {
+		return v
+	} else {
+		return false
+	}
 }
 
 func (context *Ctx) SetParsedMsg(parsedMsg string) {

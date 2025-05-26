@@ -45,8 +45,26 @@ type Command struct {
 
 	SubCommands map[string]*Command
 
+	Arguments  map[string]Argument
 	RunFunc    context.RunFunc
 	Middleware context.MiddlewareFunc
+}
+
+type ArgumentType int
+
+const (
+	ArgumentInt ArgumentType = iota
+	ArgumentFloat
+	ArgumentString
+	ArgumentBool
+)
+
+type Argument struct {
+	Name         string
+	Type         ArgumentType
+	Description  string
+	Required     bool
+	DefaultValue any
 }
 
 func NewCommand(name string) *Command {
@@ -55,6 +73,7 @@ func NewCommand(name string) *Command {
 		Description:      fmt.Sprintf("This is %s command description example", name),
 		SubCommands:      make(map[string]*Command),
 		AdditionalValues: make(map[string]any),
+		Arguments:        make(map[string]Argument),
 	}
 }
 
@@ -104,6 +123,22 @@ func (c *Command) AddSubCommands(cmd *Command) {
 
 func (c *Command) SetRunFunc(fn context.RunFunc) {
 	c.RunFunc = fn
+}
+
+func (c *Command) AddArgument(name, description string, argType ArgumentType, required bool, defaultValue ...any) {
+	defVal := any(nil)
+
+	if len(defaultValue) > 0 {
+		defVal = defaultValue[0]
+	}
+
+	c.Arguments[name] = Argument{
+		Name:         name,
+		Description:  description,
+		Type:         argType,
+		Required:     required,
+		DefaultValue: defVal,
+	}
 }
 
 func (c *Command) Use(fn context.MiddlewareFunc) {

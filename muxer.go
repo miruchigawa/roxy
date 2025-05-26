@@ -4,6 +4,7 @@ import (
 	"bytes"
 	gcontext "context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -399,6 +400,16 @@ func (muxer *Muxer) execute(
 
 	go muxer.markAsReadAndLogCommand(client, evt, sender, key)
 
+	arguments, err := ParseCommandArguments(ctx.Arguments(), command.Arguments)
+	if err != nil {
+		ctx.SendReplyMessage(fmt.Sprintf("Error: %s", err.Error()))
+		return
+	}
+
+	for k, v := range arguments {
+		ctx.StoreArgument(k, v)
+	}
+
 	var message *waProto.Message
 	if command.Cache {
 		if cached := muxer.getCachedCommandResponse(key); cached != nil {
@@ -543,4 +554,129 @@ func (muxer *Muxer) SendEmojiMessage(event *events.Message, emoji string) {
 	}
 
 	muxer.SendMessage(event.Info.Chat, message)
+}
+
+func ParseCommandArguments(argsList []string, argDefinitions map[string]Argument) (map[string]any, error) {
+	parsedArgs := make(map[string]any)
+
+	canonicalKeyMap := make(map[string]string)
+	for keyName := range argDefinitions {
+		canonicalKeyMap[strings.ToLower(keyName)] = keyName
+	}
+
+	rawUserArgs := make(map[string]string)
+	var currentCanonicalKey string
+	var currentValueParts []string
+	consumedTokenIndices := make(map[int]bool)
+
+	for i := 0; i < len(argsList); i++ {
+		token := argsList[i]
+		isKey := false
+
+		if strings.HasSuffix(token, ":") {
+			potentialKeyNameLower := strings.ToLower(strings.TrimSuffix(token, ":"))
+			if canonicalName, ok := canonicalKeyMap[potentialKeyNameLower]; ok {
+				if currentCanonicalKey != "" && len(currentValueParts) > 0 {
+					rawUserArgs[currentCanonicalKey] = strings.TrimSpace(strings.Join(currentValueParts, " "))
+				}
+				currentCanonicalKey = canonicalName
+				currentValueParts = []string{}
+				isKey = true
+				consumedTokenIndices[i] = true
+			}
+		}
+
+		if !isKey {
+			if currentCanonicalKey != "" {
+				currentValueParts = append(currentValueParts, token)
+				consumedTokenIndices[i] = true
+			}
+		}
+	}
+
+	if currentCanonicalKey != "" && len(currentValueParts) > 0 {
+		rawUserArgs[currentCanonicalKey] = strings.TrimSpace(strings.Join(currentValueParts, " "))
+	}
+
+	var unconsumedTokens []string
+	for i, token := range argsList {
+		if !consumedTokenIndices[i] {
+			unconsumedTokens = append(unconsumedTokens, token)
+		}
+	}
+
+	if len(unconsumedTokens) > 0 {
+		return nil, fmt.Errorf("unexpected args found: '%s'", strings.Join(unconsumedTokens, " "))
+	}
+
+	for _, argDef := range argDefinitions {
+		canonicalName := argDef.Name
+		userProvidedValue, wasProvidedByUser := rawUserArgs[canonicalName]
+
+		if wasProvidedByUser {
+			var convertedValue any
+			var conversionError error
+
+			if userProvidedValue == "" && argDef.Type != ArgumentString {
+				if argDef.Required || argDef.DefaultValue == nil {
+					return nil, fmt.Errorf("empty argument was found '%s' with type %s",
+						canonicalName, argTypeToString(argDef.Type))
+				}
+			} else {
+				switch argDef.Type {
+				case ArgumentString:
+					convertedValue = userProvidedValue
+				case ArgumentInt:
+					convertedValue, conversionError = strconv.Atoi(userProvidedValue)
+				case ArgumentFloat:
+					convertedValue, conversionError = strconv.ParseFloat(userProvidedValue, 64)
+				case ArgumentBool:
+					lowerVal := strings.ToLower(userProvidedValue)
+					if lowerVal == "true" || lowerVal == "t" || lowerVal == "1" {
+						convertedValue = true
+					} else if lowerVal == "false" || lowerVal == "f" || lowerVal == "0" {
+						convertedValue = false
+					} else {
+						conversionError = fmt.Errorf("'%s' not a boolean value (true/false/t/f/1/0)", userProvidedValue)
+					}
+				}
+
+				if conversionError != nil {
+					return nil, fmt.Errorf("invalid argument '%s': expected %s, found '%s'",
+						canonicalName, argTypeToString(argDef.Type), userProvidedValue)
+				}
+				parsedArgs[canonicalName] = convertedValue
+			}
+		}
+
+		if _, stillNotProcessed := parsedArgs[canonicalName]; !stillNotProcessed {
+			if !wasProvidedByUser || (userProvidedValue == "" && argDef.Type != ArgumentString && argDef.DefaultValue != nil) {
+				if argDef.Required && !wasProvidedByUser {
+					return nil, fmt.Errorf("Argument %s is required", canonicalName)
+				}
+				if argDef.DefaultValue != nil {
+					parsedArgs[canonicalName] = argDef.DefaultValue
+				} else if argDef.Required {
+					return nil, fmt.Errorf("Argument %s is required", canonicalName)
+				}
+			}
+		}
+	}
+
+	return parsedArgs, nil
+}
+
+func argTypeToString(argType ArgumentType) string {
+	switch argType {
+	case ArgumentString:
+		return "string"
+	case ArgumentInt:
+		return "integer"
+	case ArgumentFloat:
+		return "float"
+	case ArgumentBool:
+		return "boolean"
+	default:
+		return "unknown"
+	}
 }
