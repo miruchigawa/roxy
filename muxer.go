@@ -569,8 +569,7 @@ func ParseCommandArguments(argsList []string, argDefinitions map[string]Argument
 	var currentValueParts []string
 	consumedTokenIndices := make(map[int]bool)
 
-	for i := 0; i < len(argsList); i++ {
-		token := argsList[i]
+	for i, token := range argsList {
 		isKey := false
 
 		if strings.HasSuffix(token, ":") {
@@ -605,8 +604,33 @@ func ParseCommandArguments(argsList []string, argDefinitions map[string]Argument
 		}
 	}
 
+	var catchAllArgDef *Argument
+	var catchAllArgCanonicalName string
+
+	for _, def := range argDefinitions {
+		localDef := def
+		if localDef.IsCatchAll {
+			if catchAllArgDef != nil {
+				return nil, fmt.Errorf("only one catch-all argument is allowed, found multiple: '%s' and '%s'", catchAllArgCanonicalName, localDef.Name)
+			}
+			if localDef.Type != ArgumentString {
+				return nil, fmt.Errorf("catch-all argument '%s' must be of type string", localDef.Name)
+			}
+
+			catchAllArgDef = &localDef
+			catchAllArgCanonicalName = localDef.Name
+		}
+	}
+
 	if len(unconsumedTokens) > 0 {
-		return nil, fmt.Errorf("unexpected args found: '%s'", strings.Join(unconsumedTokens, " "))
+		if catchAllArgDef != nil {
+			if _, alreadySetExplicitly := rawUserArgs[catchAllArgCanonicalName]; alreadySetExplicitly {
+				return nil, fmt.Errorf("catch-all argument '%s' was already set explicitly", catchAllArgCanonicalName)
+			}
+			rawUserArgs[catchAllArgCanonicalName] = strings.Join(unconsumedTokens, " ")
+		} else {
+			return nil, fmt.Errorf("unconsumed tokens found: %s", strings.Join(unconsumedTokens, " "))
+		}
 	}
 
 	for _, argDef := range argDefinitions {
