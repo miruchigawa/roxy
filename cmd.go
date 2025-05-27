@@ -65,6 +65,12 @@ type Argument struct {
 	Description  string
 	Required     bool
 	DefaultValue any
+	IsCatchAll   bool
+}
+
+type ArgumentOptions struct {
+	DefaultValue any
+	IsCatchAll   bool
 }
 
 func NewCommand(name string) *Command {
@@ -125,11 +131,11 @@ func (c *Command) SetRunFunc(fn context.RunFunc) {
 	c.RunFunc = fn
 }
 
-func (c *Command) AddArgument(name, description string, argType ArgumentType, required bool, defaultValue ...any) {
-	defVal := any(nil)
+func (c *Command) AddArgument(name, description string, argType ArgumentType, required bool, options ...ArgumentOptions) {
+	var opt ArgumentOptions
 
-	if len(defaultValue) > 0 {
-		defVal = defaultValue[0]
+	if len(options) > 0 {
+		opt = options[0]
 	}
 
 	c.Arguments[name] = Argument{
@@ -137,7 +143,8 @@ func (c *Command) AddArgument(name, description string, argType ArgumentType, re
 		Description:  description,
 		Type:         argType,
 		Required:     required,
-		DefaultValue: defVal,
+		DefaultValue: opt.DefaultValue,
+		IsCatchAll:   opt.IsCatchAll,
 	}
 }
 

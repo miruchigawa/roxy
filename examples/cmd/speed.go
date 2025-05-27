@@ -16,10 +16,16 @@ func init() {
 
 	childNya := roxy.NewCommand("nya")
 	childNya.SetDescription("Testing subcommand")
-	childNya.AddArgument("test", "Testo", roxy.ArgumentBool, false, true)
+	childNya.AddArgument("test", "Testo", roxy.ArgumentBool, false, roxy.ArgumentOptions{DefaultValue: true})
 	childNya.SetRunFunc(nyaFn)
 
+	say := roxy.NewCommand("say")
+	say.SetDescription("Say something")
+	say.AddArgument("message", "Message to say", roxy.ArgumentString, true, roxy.ArgumentOptions{IsCatchAll: true})
+	say.SetRunFunc(sayFn)
+
 	speed.AddSubCommands(childNya)
+	speed.AddSubCommands(say)
 
 	roxy.Commands.Add(speed)
 }
@@ -37,4 +43,8 @@ func nyaFn(ctx *context.Ctx) context.Result {
 	} else {
 		return ctx.GenerateReplyMessage("Nya? (｡•́︿•̀｡)")
 	}
+}
+
+func sayFn(ctx *context.Ctx) context.Result {
+	return ctx.GenerateReplyMessage("You said: " + ctx.GetArgumentString("message"))
 }
