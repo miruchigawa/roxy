@@ -439,10 +439,6 @@ func (muxer *Muxer) resolveSubCommand(command *Command, ctx *context.Ctx) *Comma
 		return child
 	}
 
-	if wildchar, ok := command.SubCommands["*"]; ok {
-		return wildchar
-	}
-
 	return nil
 }
 
