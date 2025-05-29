@@ -3,12 +3,13 @@ package compress
 import (
 	"bytes"
 	"compress/flate"
+	"io"
+
 	"github.com/andybalholm/brotli"
 	"github.com/goccy/go-json"
-	"io"
 )
 
-func MarshallBrotli(v interface{}) ([]byte, error) {
+func MarshallBrotli(v any) ([]byte, error) {
 	result, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
@@ -53,7 +54,7 @@ func MarshallBrotli(v interface{}) ([]byte, error) {
 }
 
 func UnmarshallBrotli[T any](data []byte, v T) error {
-	var dataReader = bytes.NewReader(data)
+	dataReader := bytes.NewReader(data)
 	br := brotli.NewReader(dataReader)
 
 	var flateDecoded bytes.Buffer

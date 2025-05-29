@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	roxy "git.hanaworks.site/miruchigawa/roxy"
-	"git.hanaworks.site/miruchigawa/roxy/context"
+	roxy "github.com/miruchigawa/roxy"
+	"github.com/miruchigawa/roxy/context"
 )
 
 func init() {

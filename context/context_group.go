@@ -3,7 +3,7 @@ package context
 import (
 	"fmt"
 
-	"git.hanaworks.site/miruchigawa/roxy/util"
+	"github.com/miruchigawa/roxy/util"
 	waTypes "go.mau.fi/whatsmeow/types"
 )
 

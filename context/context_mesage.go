@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"git.hanaworks.site/miruchigawa/roxy/util"
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/miruchigawa/roxy/util"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/proto/waHistorySync"
 	waTypes "go.mau.fi/whatsmeow/types"

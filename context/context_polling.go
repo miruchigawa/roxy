@@ -3,7 +3,7 @@ package context
 import (
 	"time"
 
-	"git.hanaworks.site/miruchigawa/roxy/util"
+	"github.com/miruchigawa/roxy/util"
 	"go.mau.fi/whatsmeow"
 )
 

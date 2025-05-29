@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git.hanaworks.site/miruchigawa/roxy/util"
+	"github.com/miruchigawa/roxy/util"
 	"go.mau.fi/whatsmeow"
 	waTypes "go.mau.fi/whatsmeow/types"
 )

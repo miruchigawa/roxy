@@ -3,7 +3,7 @@ package roxy
 import (
 	"fmt"
 
-	"git.hanaworks.site/miruchigawa/roxy/util"
+	"github.com/miruchigawa/roxy/util"
 	waTypes "go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 )
@@ -11,7 +11,7 @@ import (
 func (muxer *Muxer) FindGroupByJid(groupJid waTypes.JID) (group *waTypes.GroupInfo, err error) {
 	groups, ok := muxer.GroupCache.Load(groupJid.ToNonAD().String())
 	if !ok {
-		client := muxer.AppMethods.Client()
+		client := muxer.Client()
 		groups, err = client.GetJoinedGroups()
 		if err != nil {
 			return nil, err

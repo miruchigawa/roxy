@@ -5,9 +5,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	roxy "git.hanaworks.site/miruchigawa/roxy"
-	_ "git.hanaworks.site/miruchigawa/roxy/examples/cmd"
-	"git.hanaworks.site/miruchigawa/roxy/options"
+	roxy "github.com/miruchigawa/roxy"
+	_ "github.com/miruchigawa/roxy/examples/cmd"
+	"github.com/miruchigawa/roxy/options"
 )
 
 func main() {

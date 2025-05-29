@@ -1,4 +1,4 @@
-module git.hanaworks.site/miruchigawa/roxy
+module github.com/miruchigawa/roxy
 
 go 1.24.3
 

@@ -3,7 +3,7 @@ package roxy
 import (
 	"strings"
 
-	"git.hanaworks.site/miruchigawa/roxy/util"
+	"github.com/miruchigawa/roxy/util"
 	"github.com/sajari/fuzzy"
 	waProto "go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types/events"

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sync"
 
-	"git.hanaworks.site/miruchigawa/roxy/options"
+	"github.com/miruchigawa/roxy/options"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"go.mau.fi/whatsmeow/store"
