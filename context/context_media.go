@@ -6,9 +6,9 @@ import (
 	"os"
 	"slices"
 
-	"git.hanaworks.site/miruchigawa/roxy/util"
-	"git.hanaworks.site/miruchigawa/roxy/util/thumbnail"
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/miruchigawa/roxy/util"
+	"github.com/miruchigawa/roxy/util/thumbnail"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"google.golang.org/protobuf/proto"

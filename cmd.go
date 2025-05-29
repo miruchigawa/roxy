@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"git.hanaworks.site/miruchigawa/roxy/context"
-	"git.hanaworks.site/miruchigawa/roxy/types"
+	"github.com/miruchigawa/roxy/context"
+	"github.com/miruchigawa/roxy/types"
 )
 
 var (

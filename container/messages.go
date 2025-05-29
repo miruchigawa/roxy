@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"git.hanaworks.site/miruchigawa/roxy/util/compress"
+	"github.com/miruchigawa/roxy/util/compress"
 	"go.mau.fi/whatsmeow/proto/waWeb"
 	waTypes "go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
