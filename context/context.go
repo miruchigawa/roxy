@@ -41,6 +41,7 @@ func ReleaseCtx(c *Ctx) {
 
 func NewCtx(locals *xsync.MapOf[string, string]) *Ctx {
 	ctx := AcquireCtx()
+	ctx.lastID = ""
 	ctx.locals = locals
 	ctx.argumentsMap = make(map[string]any)
 	return ctx
@@ -50,6 +51,7 @@ type Ctx struct {
 	client *whatsmeow.Client
 	event  *events.Message
 	info   waTypes.MessageInfo
+	lastID waTypes.MessageID
 
 	fromMe       bool
 	number       string

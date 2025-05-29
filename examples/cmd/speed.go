@@ -34,6 +34,10 @@ func speedFn(ctx *context.Ctx) context.Result {
 	nyow := time.Now()
 	ctx.SendReplyMessage("Checking your connection speed~! (づ｡◕‿‿◕｡)づ")
 	lawtency := time.Since(nyow).Milliseconds()
+	time.Sleep(100 * time.Millisecond) // Simulate some processing delay
+	ctx.EditMessageText("Your connection speed is being checked... (づ｡◕‿‿◕｡)づ")
+	time.Sleep(100 * time.Millisecond) // Simulate more processing delay
+	ctx.EditMessageText("Almost done... (づ｡◕‿‿◕｡)づ")
 	return ctx.GenerateReplyMessage(fmt.Sprintf("Pong! Current connection latency is %d ms (づ｡◕‿‿◕｡)づ", lawtency))
 }
 

@@ -6,7 +6,6 @@ import (
 
 	"git.hanaworks.site/miruchigawa/roxy/util"
 	"github.com/gabriel-vasile/mimetype"
-	"go.mau.fi/whatsmeow/proto/waCommon"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/proto/waHistorySync"
 	waTypes "go.mau.fi/whatsmeow/types"
@@ -162,7 +161,8 @@ func (context *Ctx) SendReplyMessage(obj any) {
 		value.ContextInfo = util.WithReply(context.MessageEvent())
 	}
 
-	context.Methods().SendMessage(context.MessageEvent().Info.Chat, message)
+	send, _ := context.Methods().SendMessage(context.MessageEvent().Info.Chat, message)
+	context.lastID = send.ID
 }
 
 // GenerateReplyMessage generate reply message to whatsmeow message object
@@ -346,33 +346,55 @@ func (context *Ctx) SendMessage(obj any) {
 		}
 	}
 
-	_, _ = context.Methods().SendMessage(context.MessageEvent().Info.Chat, message)
+	send, _ := context.Methods().SendMessage(context.MessageEvent().Info.Chat, message)
+	context.lastID = send.ID
 }
 
 // EditMessageText edit current text message to given text
 func (context *Ctx) EditMessageText(to string) error {
-	msgKey := &waCommon.MessageKey{
-		RemoteJID: proto.String(context.ChatJID().String()),
-		FromMe:    proto.Bool(true),
-		ID:        proto.String(context.MessageInfo().ID),
+	// msgKey := &waCommon.MessageKey{
+	// 	RemoteJID: proto.String(context.ChatJID().String()),
+	// 	FromMe:    proto.Bool(true),
+	// 	ID:        proto.String(context.MessageInfo().ID),
+	// }
+	// if context.Message().GetExtendedTextMessage() != nil {
+	// 	context.Message().ExtendedTextMessage.Text = proto.String(to)
+	// } else if context.Message().GetConversation() != "" {
+	// 	context.Message().Conversation = proto.String(to)
+	// } else {
+	// 	return fmt.Errorf("error: invalid message type")
+	// }
+	//
+	// message := &waE2E.Message{
+	// 	ProtocolMessage: &waE2E.ProtocolMessage{
+	// 		Key:           msgKey,
+	// 		Type:          (*waE2E.ProtocolMessage_Type)(proto.Int32(14)),
+	// 		EditedMessage: context.Message(),
+	// 	},
+	// }
+
+	// _, err := context.Methods().SendMessage(context.MessageEvent().Info.Chat, message)
+
+	if context.lastID == "" {
+		context.SendReplyMessage(to)
+		return nil
 	}
+
+	var message *waE2E.Message
 	if context.Message().GetExtendedTextMessage() != nil {
-		context.Message().ExtendedTextMessage.Text = proto.String(to)
+		message = &waE2E.Message{
+			ExtendedTextMessage: &waE2E.ExtendedTextMessage{
+				Text: proto.String(to),
+			},
+		}
 	} else if context.Message().GetConversation() != "" {
-		context.Message().Conversation = proto.String(to)
+		message = &waE2E.Message{
+			Conversation: proto.String(to),
+		}
 	} else {
 		return fmt.Errorf("error: invalid message type")
 	}
-
-	message := &waE2E.Message{
-		ProtocolMessage: &waE2E.ProtocolMessage{
-			Key:           msgKey,
-			Type:          (*waE2E.ProtocolMessage_Type)(proto.Int32(14)),
-			EditedMessage: context.Message(),
-		},
-	}
-
-	_, err := context.Methods().SendMessage(context.MessageEvent().Info.Chat, message)
+	_, err := context.Methods().SendMessage(context.info.Chat, context.client.BuildEdit(context.info.Chat, context.lastID, message))
 	return err
 }
 
